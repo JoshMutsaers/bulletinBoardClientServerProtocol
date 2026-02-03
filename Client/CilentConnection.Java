@@ -1,14 +1,17 @@
 import java.io.*;
 import java.net.*;
 
-// ABDULLLLLLLLLLLLL
-
-
 public class ClientConnection {
 
-    public interface MessageListener { }
-    public interface StatusListener { }
+    public interface MessageListener {
+        void onMessage(String line);
+    }
+    public interface StatusListener {
+        void onStatus(String status);
+    }
 
+    private final MessageListener msgListener;
+    private final StatusListener statusListener;
     private Socket socket;
     private BufferedReader reader;
     private PrintWriter writer;
@@ -22,14 +25,15 @@ public class ClientConnection {
                     String line = reader.readLine();
                     if (line == null) {
                         running = false;
-                        break; // server disconnected
+                        if (statusListener != null) statusListener.onStatus("disconnected");
+                        break;
                     }
-                    System.out.println("SERVER: " + line);
+                    if (msgListener != null) msgListener.onMessage(line);
                 }
             } catch (IOException e) {
                 if (running) {
-                    System.out.println("Read error: " + e.getMessage());
                     running = false;
+                    if (statusListener != null) statusListener.onStatus("error: " + e.getMessage());
                 }
             }
         });
@@ -37,7 +41,8 @@ public class ClientConnection {
         readerThread.start();
     }
     public ClientConnection(MessageListener msgListener, StatusListener statusListener) {
-
+        this.msgListener = msgListener;
+        this.statusListener = statusListener;
     }
 
     public boolean isConnected() {
@@ -49,8 +54,8 @@ public class ClientConnection {
         reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         writer = new PrintWriter(socket.getOutputStream(), true);
         running = true;
-        startReaderThread(); // Start the reader thread
-
+        if (statusListener != null) statusListener.onStatus("connected");
+        startReaderThread();
     }
 
     public void sendLine(String line) {
@@ -63,7 +68,7 @@ public class ClientConnection {
 
     public void disconnect() {
         running = false;
-
+        if (statusListener != null) statusListener.onStatus("disconnected");
         try {
             if (reader != null) { reader.close(); reader = null; }
             if (writer != null) { writer.close(); writer = null; }
