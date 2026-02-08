@@ -64,7 +64,7 @@ public class ClientGUI extends JFrame {
          SwingUtilities.invokeLater(() -> {
             this.messageArea.append(var1x + "\n");
 
-            // ✅ FIX #2: update dropdown from server handshake
+          
             if (var1x != null && var1x.startsWith("COLOURS ")) {
                this.updateColoursFromHandshake(var1x);
             }
@@ -85,9 +85,9 @@ public class ClientGUI extends JFrame {
       this.setLocationRelativeTo((Component)null);
    }
 
-   // ✅ NEW helper: parse "COLOURS red blue green" and set JComboBox items
+  
    private void updateColoursFromHandshake(String var1) {
-      // var1 example: "COLOURS red blue green"
+
       String[] var2 = var1.trim().split("\\s+");
       DefaultComboBoxModel<String> var3 = new DefaultComboBoxModel<>();
 
@@ -98,7 +98,6 @@ public class ClientGUI extends JFrame {
          }
       }
 
-      // Only replace if we actually got at least 1 colour
       if (var3.getSize() > 0) {
          this.postColorCombo.setModel(var3);
       }
@@ -204,7 +203,8 @@ public class ClientGUI extends JFrame {
       this.postPanel.add(this.postYField);
       this.postPanel.add(new JLabel("color:"));
 
-      // ✅ FIX #2: do NOT hardcode colours; start with placeholder
+    
+      
       String[] var1 = new String[]{"Loading..."};
       this.postColorCombo = new JComboBox<>(var1);
 
@@ -239,7 +239,7 @@ public class ClientGUI extends JFrame {
             return;
          }
 
-         // ✅ extra safety: normalize colour text
+      
          String var6 = (String)this.postColorCombo.getSelectedItem();
          if (var6 == null) {
             JOptionPane.showMessageDialog(this, "No colour selected", "Invalid input", 2);
@@ -284,14 +284,14 @@ public class ClientGUI extends JFrame {
       }
    }
 
-   // ✅ FIX #1: avoid freezing the UI by disconnecting on a background thread
+    
    protected void onDisconnectClicked() {
       new Thread(() -> {
          try {
-            // optional polite protocol close
+
             this.connection.sendLine("DISCONNECT");
          } catch (Exception var2) {
-            // ignore
+
          }
          this.connection.disconnect();
       }).start();

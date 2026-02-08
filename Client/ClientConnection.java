@@ -18,7 +18,7 @@ public class ClientConnection {
     private BufferedReader reader;
     private PrintWriter writer;
 
-    // FIX: volatile
+
     private volatile boolean running;
 
     private Thread readerThread;
@@ -88,33 +88,14 @@ public class ClientConnection {
         writer.println(line);
     }
 
-    // FIX: unblock readLine + safe shutdown
     public void disconnect() {
-
         running = false;
-
+    
         try {
-            if (socket != null && !socket.isClosed()) {
-                socket.close();
-            }
-        } catch (IOException ignored) {}
-
-        try {
-            if (reader != null) {
-                reader.close();
-                reader = null;
-            }
-        } catch (IOException ignored) {}
-
-        if (writer != null) {
-            writer.close();
-            writer = null;
-        }
-
-        socket = null;
-
-        if (statusListener != null) {
-            statusListener.onStatus("disconnected");
-        }
+            if (reader != null) { reader.close(); reader = null; }
+            if (writer != null) { writer.close(); writer = null; }
+            if (socket != null && !socket.isClosed()) { socket.close(); socket = null; }
+        } catch (IOException ignored) { }
     }
+    
 }
