@@ -1,248 +1,351 @@
-import javax.swing.*;
-import java.awt.*;
+// Source code is decompiled from a .class file using FernFlower decompiler (from Intellij IDEA).
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.FlowLayout;
+import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.Icon;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 
 public class ClientGUI extends JFrame {
+   private ClientConnection connection;
+   private JPanel connectionPanel;
+   private JTextField ipField;
+   private JTextField portField;
+   private JButton connectButton;
+   private JButton disconnectButton;
+   private JPanel centerPanel;
+   private JTextArea messageArea;
+   private JScrollPane messageScrollPane;
+   private JPanel inputPanel;
+   private JTextField inputField;
+   private JButton sendButton;
+   private JPanel buttonsPanel;
+   private JButton getPinsButton;
+   private JButton clearButton;
+   private JButton shakeButton;
+   private JButton pinUnpinButton;
+   private JPanel postPanel;
+   private JTextField postXField;
+   private JTextField postYField;
+   private JComboBox<String> postColorCombo;
+   private JTextField postMessageField;
+   private JButton postButton;
 
-    private ClientConnection connection;
-    private JPanel connectionPanel;
-    private JTextField ipField;
-    private JTextField portField;
-    private JButton connectButton;
-    private JButton disconnectButton;
+   public ClientGUI() {
+      this.setTitle("Client");
+      this.setDefaultCloseOperation(3);
+      this.setLayout(new BorderLayout());
+      this.buildConnectionPanel();
+      this.buildButtonsPanel();
+      this.buildCenterPanel();
+      this.buildPostPanel();
+      this.buildInputPanel();
 
-    private JPanel centerPanel;
-    private JTextArea messageArea;
-    private JScrollPane messageScrollPane;
+      JPanel var1 = new JPanel(new BorderLayout());
+      var1.add(this.connectionPanel, "North");
+      var1.add(this.buttonsPanel, "Center");
+      this.add(var1, "North");
+      this.add(this.centerPanel, "Center");
+      this.add(this.postPanel, "East");
+      this.add(this.inputPanel, "South");
 
-    private JPanel inputPanel;
-    private JTextField inputField;
-    private JButton sendButton;
+      this.connection = new ClientConnection((var1x) -> {
+         SwingUtilities.invokeLater(() -> {
+            this.messageArea.append(var1x + "\n");
 
-    private JPanel buttonsPanel;
-    private JButton getPinsButton;
-    private JButton clearButton;
-    private JButton shakeButton;
-    private JButton pinUnpinButton;
+            // ✅ FIX #2: update dropdown from server handshake
+            if (var1x != null && var1x.startsWith("COLOURS ")) {
+               this.updateColoursFromHandshake(var1x);
+            }
+         });
+      }, (var1x) -> {
+         SwingUtilities.invokeLater(() -> {
+            this.messageArea.append(var1x + "\n");
+            if ("connected".equals(var1x)) {
+               this.setControlsEnabled(true);
+            } else if ("disconnected".equals(var1x) || var1x.startsWith("error")) {
+               this.setControlsEnabled(false);
+            }
+         });
+      });
 
-    private JPanel postPanel;
-    private JTextField postXField;
-    private JTextField postYField;
-    private JComboBox<String> postColorCombo;
-    private JTextField postMessageField;
-    private JButton postButton;
+      this.setControlsEnabled(false);
+      this.setSize(650, 450);
+      this.setLocationRelativeTo((Component)null);
+   }
 
-    public ClientGUI() {
-        setTitle("Client");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(new BorderLayout());
+   // ✅ NEW helper: parse "COLOURS red blue green" and set JComboBox items
+   private void updateColoursFromHandshake(String var1) {
+      // var1 example: "COLOURS red blue green"
+      String[] var2 = var1.trim().split("\\s+");
+      DefaultComboBoxModel<String> var3 = new DefaultComboBoxModel<>();
 
-        buildConnectionPanel();
-        buildButtonsPanel();
-        buildCenterPanel();
-        buildPostPanel();
-        buildInputPanel();
+      int var4;
+      for(var4 = 1; var4 < var2.length; ++var4) {
+         if (!var2[var4].isEmpty()) {
+            var3.addElement(var2[var4]);
+         }
+      }
 
-        JPanel northPanel = new JPanel(new BorderLayout());
-        northPanel.add(connectionPanel, BorderLayout.NORTH);
-        northPanel.add(buttonsPanel, BorderLayout.CENTER);
+      // Only replace if we actually got at least 1 colour
+      if (var3.getSize() > 0) {
+         this.postColorCombo.setModel(var3);
+      }
+   }
 
-        add(northPanel, BorderLayout.NORTH);
-        add(centerPanel, BorderLayout.CENTER);
-        add(postPanel, BorderLayout.EAST);
-        add(inputPanel, BorderLayout.SOUTH);
+   private void buildConnectionPanel() {
+      this.connectionPanel = new JPanel(new FlowLayout(0));
+      this.connectionPanel.add(new JLabel("IP:"));
+      this.ipField = new JTextField(12);
+      this.connectionPanel.add(this.ipField);
+      this.connectionPanel.add(new JLabel("Port:"));
+      this.portField = new JTextField(5);
+      this.connectionPanel.add(this.portField);
+      this.connectButton = new JButton("Connect");
+      this.connectButton.addActionListener((var1) -> {
+         this.onConnectClicked();
+      });
+      this.connectionPanel.add(this.connectButton);
+      this.disconnectButton = new JButton("Disconnect");
+      this.disconnectButton.addActionListener((var1) -> {
+         this.onDisconnectClicked();
+      });
+      this.connectionPanel.add(this.disconnectButton);
+   }
 
-        connection = new ClientConnection(
-            line -> SwingUtilities.invokeLater(() -> {
-                messageArea.append(line + "\n");
-            }),
-            status -> SwingUtilities.invokeLater(() -> {
-                messageArea.append(status + "\n");
-                if ("connected".equals(status)) {
-                    setControlsEnabled(true);
-                } else if ("disconnected".equals(status) || status.startsWith("error")) {
-                    setControlsEnabled(false);
-                }
-            })
-        );
+   private void buildButtonsPanel() {
+      this.buttonsPanel = new JPanel(new FlowLayout(0));
+      this.getPinsButton = new JButton("GET PINS");
+      this.getPinsButton.addActionListener((var1) -> {
+         this.connection.sendLine("GET PINS");
+      });
+      this.buttonsPanel.add(this.getPinsButton);
+      this.clearButton = new JButton("CLEAR");
+      this.clearButton.addActionListener((var1) -> {
+         this.connection.sendLine("CLEAR");
+      });
+      this.buttonsPanel.add(this.clearButton);
+      this.shakeButton = new JButton("SHAKE");
+      this.shakeButton.addActionListener((var1) -> {
+         this.connection.sendLine("SHAKE");
+      });
+      this.buttonsPanel.add(this.shakeButton);
+      this.pinUnpinButton = new JButton("PIN / UNPIN");
+      this.pinUnpinButton.addActionListener((var1) -> {
+         this.showPinUnpinDialog();
+      });
+      this.buttonsPanel.add(this.pinUnpinButton);
+   }
 
-        setControlsEnabled(false);
+   private void showPinUnpinDialog() {
+      JTextField var1 = new JTextField(5);
+      JTextField var2 = new JTextField(5);
+      JPanel var3 = new JPanel(new FlowLayout());
+      var3.add(new JLabel("x:"));
+      var3.add(var1);
+      var3.add(new JLabel("y:"));
+      var3.add(var2);
+      String[] var4 = new String[]{"PIN", "UNPIN", "Cancel"};
+      int var5 = JOptionPane.showOptionDialog(this, var3, "PIN / UNPIN", -1, -1, (Icon)null, var4, var4[2]);
+      if (var5 != 2) {
+         String var6 = var1.getText().trim();
+         String var7 = var2.getText().trim();
 
-        setSize(650, 450);
-        setLocationRelativeTo(null);
-    }
-
-    private void buildConnectionPanel() {
-        connectionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        connectionPanel.add(new JLabel("IP:"));
-        ipField = new JTextField(12);
-        connectionPanel.add(ipField);
-        connectionPanel.add(new JLabel("Port:"));
-        portField = new JTextField(5);
-        connectionPanel.add(portField);
-        connectButton = new JButton("Connect");
-        connectButton.addActionListener(e -> onConnectClicked());
-        connectionPanel.add(connectButton);
-        disconnectButton = new JButton("Disconnect");
-        disconnectButton.addActionListener(e -> onDisconnectClicked());
-        connectionPanel.add(disconnectButton);
-    }
-
-    private void buildButtonsPanel() {
-        buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        getPinsButton = new JButton("GET PINS");
-        getPinsButton.addActionListener(e -> connection.sendLine("GET PINS"));
-        buttonsPanel.add(getPinsButton);
-        clearButton = new JButton("CLEAR");
-        clearButton.addActionListener(e -> connection.sendLine("CLEAR"));
-        buttonsPanel.add(clearButton);
-        shakeButton = new JButton("SHAKE");
-        shakeButton.addActionListener(e -> connection.sendLine("SHAKE"));
-        buttonsPanel.add(shakeButton);
-        pinUnpinButton = new JButton("PIN / UNPIN");
-        pinUnpinButton.addActionListener(e -> showPinUnpinDialog());
-        buttonsPanel.add(pinUnpinButton);
-    }
-
-    private void showPinUnpinDialog() {
-        JTextField xField = new JTextField(5);
-        JTextField yField = new JTextField(5);
-        JPanel panel = new JPanel(new FlowLayout());
-        panel.add(new JLabel("x:"));
-        panel.add(xField);
-        panel.add(new JLabel("y:"));
-        panel.add(yField);
-        String[] options = { "PIN", "UNPIN", "Cancel" };
-        int choice = JOptionPane.showOptionDialog(this, panel, "PIN / UNPIN",
-            JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, options, options[2]);
-        if (choice == 2) return; // Cancel
-        String xs = xField.getText().trim();
-        String ys = yField.getText().trim();
-        int x, y;
-        try {
-            x = Integer.parseInt(xs);
-            y = Integer.parseInt(ys);
-            if (x < 0 || y < 0) throw new NumberFormatException("must be >= 0");
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "x and y must be integers >= 0", "Invalid input", JOptionPane.WARNING_MESSAGE);
+         int var8;
+         int var9;
+         try {
+            var8 = Integer.parseInt(var6);
+            var9 = Integer.parseInt(var7);
+            if (var8 < 0 || var9 < 0) {
+               throw new NumberFormatException("must be >= 0");
+            }
+         } catch (NumberFormatException var11) {
+            JOptionPane.showMessageDialog(this, "x and y must be integers >= 0", "Invalid input", 2);
             return;
-        }
-        if (choice == 0) connection.sendLine("PIN " + x + " " + y);
-        else if (choice == 1) connection.sendLine("UNPIN " + x + " " + y);
-    }
+         }
 
-    private void buildCenterPanel() {
-        centerPanel = new JPanel(new BorderLayout());
-        messageArea = new JTextArea();
-        messageArea.setEditable(false);
-        messageArea.setLineWrap(true);
-        messageScrollPane = new JScrollPane(messageArea);
-        centerPanel.add(messageScrollPane, BorderLayout.CENTER);
-    }
+         if (var5 == 0) {
+            this.connection.sendLine("PIN " + var8 + " " + var9);
+         } else if (var5 == 1) {
+            this.connection.sendLine("UNPIN " + var8 + " " + var9);
+         }
+      }
+   }
 
-    private void buildPostPanel() {
-        postPanel = new JPanel();
-        postPanel.setLayout(new BoxLayout(postPanel, BoxLayout.Y_AXIS));
-        postPanel.setBorder(BorderFactory.createTitledBorder("POST"));
-        postPanel.add(new JLabel("x:"));
-        postXField = new JTextField(6);
-        postPanel.add(postXField);
-        postPanel.add(new JLabel("y:"));
-        postYField = new JTextField(6);
-        postPanel.add(postYField);
-        postPanel.add(new JLabel("color:"));
-        // TODO: replace with server-provided colors from handshake
-        String[] colors = { "red", "blue", "green", "yellow", "black", "white" };
-        postColorCombo = new JComboBox<>(colors);
-        postPanel.add(postColorCombo);
-        postPanel.add(new JLabel("message:"));
-        postMessageField = new JTextField(10);
-        postPanel.add(postMessageField);
-        postButton = new JButton("POST");
-        postButton.addActionListener(e -> onPostClicked());
-        postPanel.add(postButton);
-    }
+   private void buildCenterPanel() {
+      this.centerPanel = new JPanel(new BorderLayout());
+      this.messageArea = new JTextArea();
+      this.messageArea.setEditable(false);
+      this.messageArea.setLineWrap(true);
+      this.messageScrollPane = new JScrollPane(this.messageArea);
+      this.centerPanel.add(this.messageScrollPane, "Center");
+   }
 
-    private void onPostClicked() {
-        String xs = postXField.getText().trim();
-        String ys = postYField.getText().trim();
-        String message = postMessageField.getText().trim();
-        if (message.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Message cannot be empty", "Invalid input", JOptionPane.WARNING_MESSAGE);
+   private void buildPostPanel() {
+      this.postPanel = new JPanel();
+      this.postPanel.setLayout(new BoxLayout(this.postPanel, 1));
+      this.postPanel.setBorder(BorderFactory.createTitledBorder("POST"));
+      this.postPanel.add(new JLabel("x:"));
+      this.postXField = new JTextField(6);
+      this.postPanel.add(this.postXField);
+      this.postPanel.add(new JLabel("y:"));
+      this.postYField = new JTextField(6);
+      this.postPanel.add(this.postYField);
+      this.postPanel.add(new JLabel("color:"));
+
+      // ✅ FIX #2: do NOT hardcode colours; start with placeholder
+      String[] var1 = new String[]{"Loading..."};
+      this.postColorCombo = new JComboBox<>(var1);
+
+      this.postPanel.add(this.postColorCombo);
+      this.postPanel.add(new JLabel("message:"));
+      this.postMessageField = new JTextField(10);
+      this.postPanel.add(this.postMessageField);
+      this.postButton = new JButton("POST");
+      this.postButton.addActionListener((var1x) -> {
+         this.onPostClicked();
+      });
+      this.postPanel.add(this.postButton);
+   }
+
+   private void onPostClicked() {
+      String var1 = this.postXField.getText().trim();
+      String var2 = this.postYField.getText().trim();
+      String var3 = this.postMessageField.getText().trim();
+      if (var3.isEmpty()) {
+         JOptionPane.showMessageDialog(this, "Message cannot be empty", "Invalid input", 2);
+      } else {
+         int var4;
+         int var5;
+         try {
+            var4 = Integer.parseInt(var1);
+            var5 = Integer.parseInt(var2);
+            if (var4 < 0 || var5 < 0) {
+               throw new NumberFormatException("must be >= 0");
+            }
+         } catch (NumberFormatException var7) {
+            JOptionPane.showMessageDialog(this, "x and y must be integers >= 0", "Invalid input", 2);
             return;
-        }
-        int x, y;
-        try {
-            x = Integer.parseInt(xs);
-            y = Integer.parseInt(ys);
-            if (x < 0 || y < 0) throw new NumberFormatException("must be >= 0");
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "x and y must be integers >= 0", "Invalid input", JOptionPane.WARNING_MESSAGE);
+         }
+
+         // ✅ extra safety: normalize colour text
+         String var6 = (String)this.postColorCombo.getSelectedItem();
+         if (var6 == null) {
+            JOptionPane.showMessageDialog(this, "No colour selected", "Invalid input", 2);
             return;
-        }
-        String color = (String) postColorCombo.getSelectedItem();
-        connection.sendLine("POST " + x + " " + y + " " + color + " " + message);
-    }
+         }
+         var6 = var6.trim().toLowerCase();
 
-    private void buildInputPanel() {
-        inputPanel = new JPanel(new BorderLayout(5, 0));
-        inputField = new JTextField();
-        sendButton = new JButton("Send");
-        sendButton.addActionListener(e -> onSendClicked());
-        inputPanel.add(inputField, BorderLayout.CENTER);
-        inputPanel.add(sendButton, BorderLayout.EAST);
-    }
+         this.connection.sendLine("POST " + var4 + " " + var5 + " " + var6 + " " + var3);
+      }
+   }
 
-    protected void onConnectClicked() {
-        String ip = ipField.getText().trim();
-        String portStr = portField.getText().trim();
-        messageArea.append("connecting…\n");
-        int port;
-        try {
-            port = Integer.parseInt(portStr);
-        } catch (NumberFormatException e) {
-            messageArea.append("Bad port (not a number)\n");
-            return;
-        }
-        try {
-            connection.connect(ip, port);
-        } catch (Exception e) {
-            SwingUtilities.invokeLater(() -> messageArea.append("connect failed: " + e.getMessage() + "\n"));
-        }
-    }
+   private void buildInputPanel() {
+      this.inputPanel = new JPanel(new BorderLayout(5, 0));
+      this.inputField = new JTextField();
+      this.sendButton = new JButton("Send");
+      this.sendButton.addActionListener((var1) -> {
+         this.onSendClicked();
+      });
+      this.inputPanel.add(this.inputField, "Center");
+      this.inputPanel.add(this.sendButton, "East");
+   }
 
-    protected void onDisconnectClicked() {
-        connection.disconnect();
-    }
+   protected void onConnectClicked() {
+      String var1 = this.ipField.getText().trim();
+      String var2 = this.portField.getText().trim();
+      this.messageArea.append("connecting…\n");
 
-    protected void onSendClicked() {
-        String text = inputField.getText().trim();
-        if (text.isEmpty()) return;
-        connection.sendLine(text);
-        inputField.setText("");
-    }
+      int var3;
+      try {
+         var3 = Integer.parseInt(var2);
+      } catch (NumberFormatException var6) {
+         this.messageArea.append("Bad port (not a number)\n");
+         return;
+      }
 
-    // --- Getters: use these to read/write UI ---
-    public JTextField getIpField() { return ipField; }
-    public JTextField getPortField() { return portField; }
-    public JButton getConnectButton() { return connectButton; }
-    public JButton getDisconnectButton() { return disconnectButton; }
-    public JTextArea getMessageArea() { return messageArea; }
-    public JTextField getInputField() { return inputField; }
-    public JButton getSendButton() { return sendButton; }
+      try {
+         this.connection.connect(var1, var3);
+      } catch (Exception var5) {
+         SwingUtilities.invokeLater(() -> {
+            this.messageArea.append("connect failed: " + var5.getMessage() + "\n");
+         });
+      }
+   }
 
-    private void setControlsEnabled(boolean connected) {
-        getPinsButton.setEnabled(connected);
-        clearButton.setEnabled(connected);
-        shakeButton.setEnabled(connected);
-        pinUnpinButton.setEnabled(connected);
-        postButton.setEnabled(connected);
-        sendButton.setEnabled(connected);
-    }
+   // ✅ FIX #1: avoid freezing the UI by disconnecting on a background thread
+   protected void onDisconnectClicked() {
+      new Thread(() -> {
+         try {
+            // optional polite protocol close
+            this.connection.sendLine("DISCONNECT");
+         } catch (Exception var2) {
+            // ignore
+         }
+         this.connection.disconnect();
+      }).start();
+   }
 
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            ClientGUI gui = new ClientGUI();
-            gui.setVisible(true);
-        });
-    }
+   protected void onSendClicked() {
+      String var1 = this.inputField.getText().trim();
+      if (!var1.isEmpty()) {
+         this.connection.sendLine(var1);
+         this.inputField.setText("");
+      }
+   }
+
+   public JTextField getIpField() {
+      return this.ipField;
+   }
+
+   public JTextField getPortField() {
+      return this.portField;
+   }
+
+   public JButton getConnectButton() {
+      return this.connectButton;
+   }
+
+   public JButton getDisconnectButton() {
+      return this.disconnectButton;
+   }
+
+   public JTextArea getMessageArea() {
+      return this.messageArea;
+   }
+
+   public JTextField getInputField() {
+      return this.inputField;
+   }
+
+   public JButton getSendButton() {
+      return this.sendButton;
+   }
+
+   private void setControlsEnabled(boolean var1) {
+      this.getPinsButton.setEnabled(var1);
+      this.clearButton.setEnabled(var1);
+      this.shakeButton.setEnabled(var1);
+      this.pinUnpinButton.setEnabled(var1);
+      this.postButton.setEnabled(var1);
+      this.sendButton.setEnabled(var1);
+   }
+
+   public static void main(String[] var0) {
+      SwingUtilities.invokeLater(() -> {
+         ClientGUI var0x = new ClientGUI();
+         var0x.setVisible(true);
+      });
+   }
 }

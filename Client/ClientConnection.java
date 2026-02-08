@@ -6,16 +6,21 @@ public class ClientConnection {
     public interface MessageListener {
         void onMessage(String line);
     }
+
     public interface StatusListener {
         void onStatus(String status);
     }
 
     private final MessageListener msgListener;
     private final StatusListener statusListener;
+
     private Socket socket;
     private BufferedReader reader;
     private PrintWriter writer;
-    private boolean running;
+
+    // FIX: volatile
+    private volatile boolean running;
+
     private Thread readerThread;
 
     private void startReaderThread() {
@@ -23,23 +28,31 @@ public class ClientConnection {
             try {
                 while (running) {
                     String line = reader.readLine();
+
                     if (line == null) {
-                        running = false;
-                        if (statusListener != null) statusListener.onStatus("disconnected");
                         break;
                     }
-                    if (msgListener != null) msgListener.onMessage(line);
+
+                    if (msgListener != null) {
+                        msgListener.onMessage(line);
+                    }
                 }
             } catch (IOException e) {
-                if (running) {
-                    running = false;
-                    if (statusListener != null) statusListener.onStatus("error: " + e.getMessage());
+                if (running && statusListener != null) {
+                    statusListener.onStatus("error: " + e.getMessage());
+                }
+            } finally {
+                running = false;
+                if (statusListener != null) {
+                    statusListener.onStatus("disconnected");
                 }
             }
         });
-    
+
+        readerThread.setDaemon(true);
         readerThread.start();
     }
+
     public ClientConnection(MessageListener msgListener, StatusListener statusListener) {
         this.msgListener = msgListener;
         this.statusListener = statusListener;
@@ -50,11 +63,20 @@ public class ClientConnection {
     }
 
     public void connect(String ip, int port) throws IOException {
-        this.socket = new Socket(ip, port);
-        reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        writer = new PrintWriter(socket.getOutputStream(), true);
+        socket = new Socket(ip, port);
+
+        reader = new BufferedReader(
+                new InputStreamReader(socket.getInputStream()));
+
+        writer = new PrintWriter(
+                socket.getOutputStream(), true);
+
         running = true;
-        if (statusListener != null) statusListener.onStatus("connected");
+
+        if (statusListener != null) {
+            statusListener.onStatus("connected");
+        }
+
         startReaderThread();
     }
 
@@ -66,13 +88,33 @@ public class ClientConnection {
         writer.println(line);
     }
 
+    // FIX: unblock readLine + safe shutdown
     public void disconnect() {
+
         running = false;
-        if (statusListener != null) statusListener.onStatus("disconnected");
+
         try {
-            if (reader != null) { reader.close(); reader = null; }
-            if (writer != null) { writer.close(); writer = null; }
-            if (socket != null && !socket.isClosed()) { socket.close(); socket = null; }
-        } catch (IOException ignored) { }
+            if (socket != null && !socket.isClosed()) {
+                socket.close();
+            }
+        } catch (IOException ignored) {}
+
+        try {
+            if (reader != null) {
+                reader.close();
+                reader = null;
+            }
+        } catch (IOException ignored) {}
+
+        if (writer != null) {
+            writer.close();
+            writer = null;
+        }
+
+        socket = null;
+
+        if (statusListener != null) {
+            statusListener.onStatus("disconnected");
+        }
     }
 }
