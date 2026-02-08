@@ -244,7 +244,7 @@ public class ClientGUI extends JFrame {
             JOptionPane.showMessageDialog(this, "No colour selected", "Invalid input", 2);
             return;
          }
-         var6 = var6.trim().toLowerCase();
+         var6 = var6.trim();
 
          this.connection.sendLine("POST " + var4 + " " + var5 + " " + var6 + " " + var3);
       }
